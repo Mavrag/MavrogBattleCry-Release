@@ -47,7 +47,7 @@ function Test-Gh {
 function Get-ChangelogSection {
   param([string]$Path, [string]$VersionNumber)
   if (-not (Test-Path $Path)) { return "" }
-  $lines = Get-Content -LiteralPath $Path
+  $lines = Get-Content -LiteralPath $Path -Encoding UTF8
   $start = -1
   $end   = $lines.Count
   for ($i = 0; $i -lt $lines.Count; $i++) {
