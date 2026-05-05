@@ -1,0 +1,50 @@
+name: Release Addon
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Resolve version
+        id: ver
+        run: echo "version=${GITHUB_REF_NAME#v}" >> "$GITHUB_OUTPUT"
+
+      - name: Stage addon files
+        run: |
+          set -e
+          STAGE="$RUNNER_TEMP/stage/MavrogBattleCry"
+          mkdir -p "$STAGE"
+          # Copy everything except VCS / CI / build artifacts.
+          rsync -av \
+            --exclude='.git' \
+            --exclude='.github' \
+            --exclude='*.zip' \
+            --exclude='dist' \
+            ./ "$STAGE/"
+          # Stamp version into the .toc if a placeholder exists.
+          if [ -f "$STAGE/MavrogBattleCry.toc" ]; then
+            sed -i "s/^## Version:.*/## Version: ${{ steps.ver.outputs.version }}/" "$STAGE/MavrogBattleCry.toc"
+          fi
+
+      - name: Create zip
+        run: |
+          cd "$RUNNER_TEMP/stage"
+          zip -r "$GITHUB_WORKSPACE/MavrogBattleCry-${{ steps.ver.outputs.version }}.zip" MavrogBattleCry
+
+      - name: Publish GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          name: MavrogBattleCry ${{ steps.ver.outputs.version }}
+          tag_name: ${{ github.ref_name }}
+          generate_release_notes: true
+          files: MavrogBattleCry-${{ steps.ver.outputs.version }}.zip
